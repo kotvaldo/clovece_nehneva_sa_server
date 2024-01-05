@@ -6,17 +6,17 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-int main(int argc, char *argv[])
-{
+using namespace std;
+
+int main(int argc, char *argv[]) {
     int sockfd, newsockfd;
     socklen_t cli_len;
     struct sockaddr_in serv_addr, cli_addr;
     int n;
     char buffer[256];
 
-    if (argc < 2)
-    {
-        std::cerr << "usage " << argv[0] << " port" << std::endl;
+    if (argc < 2) {
+        cerr << "usage " << argv[0] << " port" << endl;
         return 1;
     }
 
@@ -26,49 +26,66 @@ int main(int argc, char *argv[])
     serv_addr.sin_port = htons(atoi(argv[1]));
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-    {
+    if (sockfd < 0) {
         perror("Error creating socket");
         return 1;
     }
 
-    if (bind(sockfd, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0)
-    {
+    if (bind(sockfd, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
         perror("Error binding socket address");
         return 2;
     }
 
-    int i = 0;
+    int max_connections = 4;
+    int clients_connected = 0;
 
-
-    listen(sockfd, 5);
+    listen(sockfd, max_connections);
     cli_len = sizeof(cli_addr);
 
-    newsockfd = accept(sockfd, reinterpret_cast<struct sockaddr *>(&cli_addr), &cli_len);
-    if (newsockfd < 0)
-    {
-        perror("ERROR on accept");
-        return 3;
+    // accept connections until max is reached
+    while (clients_connected < max_connections) {
+        newsockfd = accept(sockfd, reinterpret_cast<struct sockaddr *>(&cli_addr), &cli_len);
+        if (newsockfd < 0) {
+            perror("ERROR on accept");
+            return 3;
+        }
+        cout << "Clients connected: " << clients_connected + 1 << endl;
+
+        clients_connected++;
     }
 
-    bzero(buffer, 256);
-    n = read(newsockfd, buffer, 255);
-    if (n < 0)
-    {
-        perror("Error reading from socket");
-        return 4;
-    }
-    std::cout << "Here is the message: " << buffer << std::endl;
+    // play the game
+    while (true) {
+        cout << "Your turn to roll the dice" << endl;
 
-    const char *msg = "I got your message";
-    n = write(newsockfd, msg, strlen(msg) + 1);
-    if (n < 0)
-    {
-        perror("Error writing to socket");
-        return 5;
+        bzero(buffer, 256);
+        n = read(newsockfd, buffer, 255);
+        if (n < 0) {
+            perror("Error reading from socket");
+            return 4;
+        }
+
+        int rng = rand() % 6 + 1;
+        const char *msg = "You rolled " + rng;
+
+        n = write(newsockfd, msg, strlen(msg) + 1);
+        if (n < 0) {
+            perror("Error writing to socket");
+            return 5;
+        }
+
+        /* typek sa odpoji
+        if() {
+            close(newsockfd);
+            clients_connected--;
+        }
+         */
+
+        if (clients_connected <= 0) {
+            break;
+        }
     }
 
-    close(newsockfd);
     close(sockfd);
 
     return 0;
