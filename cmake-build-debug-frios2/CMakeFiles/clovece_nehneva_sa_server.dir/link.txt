@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/clovece_nehneva_sa_server.dir/server.cpp.o -o clovece_nehneva_sa_server 

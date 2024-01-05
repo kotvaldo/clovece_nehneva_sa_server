@@ -1,0 +1,3 @@
+C:/Users/adams/Desktop/clovece_nehneva_sa_server/cmake-build-debug/CMakeFiles/clovece_nehneva_sa_server.dir
+C:/Users/adams/Desktop/clovece_nehneva_sa_server/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/adams/Desktop/clovece_nehneva_sa_server/cmake-build-debug/CMakeFiles/rebuild_cache.dir
