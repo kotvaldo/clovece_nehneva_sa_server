@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     listen(sockfd, max_connections);
     cli_len = sizeof(cli_addr);
 
-    // accept connections until max is reached
+    // Accept connections until max is reached
     while (clients_connected < max_connections) {
         newsockfd = accept(sockfd, reinterpret_cast<struct sockaddr *>(&cli_addr), &cli_len);
         if (newsockfd < 0) {
@@ -54,35 +54,31 @@ int main(int argc, char *argv[]) {
         clients_connected++;
     }
 
-    // play the game
+    // Play the game
     while (true) {
         cout << "Your turn to roll the dice" << endl;
 
         bzero(buffer, 256);
         n = read(newsockfd, buffer, 255);
-        if (n < 0) {
-            perror("Error reading from socket");
-            return 4;
-        }
 
-        int rng = rand() % 6 + 1;
-        const char *msg = "You rolled " + rng;
-
-        n = write(newsockfd, msg, strlen(msg) + 1);
-        if (n < 0) {
-            perror("Error writing to socket");
-            return 5;
-        }
-
-        /* typek sa odpoji
-        if() {
+        if (n <= 0) {
+            // Handle client disconnection or error
             close(newsockfd);
             clients_connected--;
-        }
-         */
+            cout << "Client disconnected. Remaining clients: " << clients_connected << endl;
 
-        if (clients_connected <= 0) {
-            break;
+            if (clients_connected <= 0) {
+                break;
+            }
+        } else {
+            int rng = rand() % 6 + 1;
+            const string msg = "You rolled " + to_string(rng);
+
+            n = write(newsockfd, msg.c_str(), msg.length() + 1);
+            if (n < 0) {
+                perror("Error writing to socket");
+                return 5;
+            }
         }
     }
 
