@@ -61,8 +61,7 @@ int main(int argc, char *argv[]) {
         bzero(buffer, 256);
         n = read(newsockfd, buffer, 255);
 
-        if (n <= 0) {
-            // Handle client disconnection or error
+        if (strcmp(n, "end") == 0) {
             close(newsockfd);
             clients_connected--;
             cout << "Client disconnected. Remaining clients: " << clients_connected << endl;
