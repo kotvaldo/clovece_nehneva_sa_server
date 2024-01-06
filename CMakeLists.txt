@@ -8,5 +8,7 @@ add_executable(clovece_nehneva_sa_server server.cpp
         sockets/passive_socket.h
         sockets/active_socket.cpp
         sockets/active_socket.h
-        sockets/passive_socket.h
-        sockets/active_socket.cpp)
+        buffer/buffer.h
+        buffer/char_buffer.h
+        buffer/char_buffer.cpp
+        buffer/linked_list.h)
