@@ -9,6 +9,8 @@
 #include "char_buffer.h"
 #include "linked_list.h"
 
+using namespace std;
+
 GENERATE_LINKED_LIST(struct char_buffer, char_buffer);
 
 typedef struct active_socket {
