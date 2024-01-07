@@ -95,12 +95,12 @@ void active_socket_read(struct active_socket *self) {
                 }
             } else if (bytesRead == 0) {
                 // Koniec vstupu (EOF)
-                cout << "0 znakov zadanych" << endl;
+                cout << "0 znakov zadanych pri citani na serveri" << endl;
                 active_socket_stop_reading(self);
                 break;
             } else {
                 // bytesRead < 0 - chyba pri čítaní
-                perror("read failed.");
+                perror("read failed na serveri.");
                 active_socket_stop_reading(self);
                 break;
             }
