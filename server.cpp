@@ -13,10 +13,10 @@ using namespace std;
 int main(int argc, char *argv[]) {
     passive_socket passiveSocket{10};
 
-    active_socket client1{};
-    active_socket client2{};
-    active_socket client3{};
-    active_socket client4{};
+    active_socket client1{1};
+    active_socket client2{2};
+    active_socket client3{3};
+    active_socket client4{4};
 
     if (passive_socket_init(&passiveSocket)) {
 
