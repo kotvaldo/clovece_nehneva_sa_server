@@ -32,7 +32,7 @@ bool passive_socket_init(struct passive_socket *passiveSocket);
 void passive_socket_destroy(struct passive_socket *passiveSocket);
 bool passive_socket_listen(struct passive_socket * passiveSocket);
 bool passive_socket_bind(struct passive_socket *passiveSocket);
-bool passive_socket_wait_for_clients(struct passive_socket *passiveSocket, struct active_socket *activeSocket, int client);
+bool passive_socket_wait_for_clients(struct passive_socket *passiveSocket, struct active_socket *activeSocket);
 
 
 #endif //CLOVECE_NEHNEVA_SA_SERVER_PASSIVE_SOCKET_H

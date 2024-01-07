@@ -65,7 +65,7 @@ bool passive_socket_is_listening_now(struct passive_socket *passiveSocket) {
 }
 
 
-bool passive_socket_wait_for_clients(struct passive_socket *passiveSocket, struct active_socket *activeSocket, int client) {
+bool passive_socket_wait_for_clients(struct passive_socket *passiveSocket, struct active_socket *activeSocket) {
     pthread_mutex_lock(&passiveSocket->mutex);
     if (passiveSocket->isWaiting) {
         pthread_mutex_unlock(&passiveSocket->mutex);
@@ -82,7 +82,7 @@ bool passive_socket_wait_for_clients(struct passive_socket *passiveSocket, struc
     struct timeval tv;
     tv.tv_usec = 0;
     cout << endl;
-    cout << "Waiting for client "<< client << endl;
+    cout << "Waiting for client "<< activeSocket->id << endl;
     while (passive_socket_is_listening_now(passiveSocket)) {
         FD_SET(passiveSocket->socket_descriptor, &sockets);
         tv.tv_sec = 1;
