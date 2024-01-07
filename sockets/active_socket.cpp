@@ -83,8 +83,6 @@ void active_socket_start_reading(struct active_socket *self) {
             ssize_t bytesRead = read(self->socket_descriptor, self->buffer.data(), self->buffer.size());
 
             if (bytesRead > 0) {
-                size_t first_i = 0;
-                size_t last_i = 0;
                 stringstream ss;
 
                 for (size_t i = 0; i < bytesRead; ++i) {
