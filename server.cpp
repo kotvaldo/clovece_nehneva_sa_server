@@ -71,7 +71,7 @@ void *vykonaj_tah(void *data) {
                 switch(hrac->socket->data.back()) {
                     case "3":
                         // server sa opyta klienta, ktorym panacikom sa chce pohnut
-                        active_socket_write_data(hrac->socket, "posun");
+                        active_socket_write_data(hrac->socket, "hod");
                         active_socket_start_reading(hrac->socket);
                         if (panacikovia_na_doske > 0) {
                             int panacik = stoi(hrac->socket->data.back() - 1);
@@ -83,7 +83,7 @@ void *vykonaj_tah(void *data) {
                             cout << "Hrac (" << hrac->id << ") sa nema s kym pohnut." << endl;
                         }
                         break;
-                        
+
                     case "4":
                         active_socket_write_data(hrac->socket, "novy");
                         active_socket_start_reading(hrac->socket);
@@ -103,16 +103,16 @@ void *vykonaj_tah(void *data) {
                                     break;
                                 }
                             }
-                            
+
                             hrac->hracia_doska->cesta[pozicia] = true;
                             cout << "Hrac (" << hrac->id << ") pridava svojho panacika na startovacie policko." << endl;
                         } else {
                             cout << "Hrac (" << hrac->id << ") nemoze pridat panacika." << endl;
                         }
                         break;
-                        
+
                     default:
-                        
+
                         break;
                 }
                 // pripady so ziadnym panacikom na doske
