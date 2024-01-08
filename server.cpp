@@ -1,13 +1,10 @@
 #include <iostream>
-#include <cstring>
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <vector>
 #include "sockets/passive_socket.h"
 #include "doska/doska.h"
+#include "pthread.h"
 
 #define NUMBER_OF_PLAYERS 4
 #define BOARD_SIZE 40
@@ -57,6 +54,63 @@ int daj_startovacie_policko(int id) {
     }
 }
 
+void zvladaj_ukon(int ukon, int panacikovia_na_doske, int hod, DATA_HRACI *hrac) {
+    if (ukon == 3) {
+        if (panacikovia_na_doske > 0) {
+            int panacik = stoi(hrac->socket->data.back()) - 1;
+            int povodnaPoloha = hrac->pozicie_panacikov[panacik];
+            int novaPoloha = (hrac->pozicie_panacikov[panacik] + hod) % BOARD_SIZE;
+
+            hrac->pozicie_panacikov[panacik] = novaPoloha;
+            hrac->hracia_doska->aktualne_pozicie_panacikov[panacik + 4 * hrac->id] = novaPoloha;
+
+            // ak panacik presiel celu cestu az do domceku
+            if (hrac->prejdene_policka[panacik] > BOARD_SIZE) {
+                hrac->domcek[panacik] = true;
+                hrac->pozicie_panacikov[panacik] = 999;
+                move_player(hrac->hracia_doska->doska, povodnaPoloha, 999, hrac->target);
+                cout << "Panacik hraca (" << hrac->id << ") sa dostal do domceka." << endl;
+            } else {
+                move_player(hrac->hracia_doska->doska, povodnaPoloha, novaPoloha, hrac->target);
+                cout << "Hrac (" << hrac->id << ") sa pohol panacikom " << panacik << "." << endl;
+            }
+
+            // aktualizacia pozicie panacika daneho hraca
+            broadcast_message(hrac->hracia_doska->hraci,
+                              serialize_doska(hrac->hracia_doska->doska));
+        } else {
+            cout << "Hrac (" << hrac->id << ") sa nema s kym pohnut." << endl;
+        }
+    } else if (ukon == 4) {
+        int start = daj_startovacie_policko(hrac->id);
+
+        // ak je niekto na startovacom policku daneho hraca, vyhod ho
+        for (int i = 0; i < 16; ++i) {
+            if (hrac->hracia_doska->aktualne_pozicie_panacikov[i] == start) {
+                hrac->hracia_doska->aktualne_pozicie_panacikov[i] = -1;
+                move_player(hrac->hracia_doska->doska, start, -1, hrac->target);
+
+            }
+        }
+        for (int i = 0; i < 4; ++i) {
+            if (hrac->pozicie_panacikov[i] < 0) {
+                hrac->pozicie_panacikov[i] = start;
+                hrac->hracia_doska->aktualne_pozicie_panacikov[i + 4 * hrac->id] = start;
+                move_player(hrac->hracia_doska->doska, -1, start, hrac->target);
+            }
+        }
+        broadcast_message(hrac->hracia_doska->hraci, serialize_doska(hrac->hracia_doska->doska));
+        cout << "Hrac (" << hrac->id << ") pridava svojho panacika na startovacie policko." << endl;
+    } else if (ukon == 5) {
+        broadcast_message(hrac->hracia_doska->hraci, "koniec");
+        active_socket_destroy(hrac->socket);
+        hrac->hracia_doska->pocet_hrajucich_hracov--;
+
+    }
+
+}
+
+
 void *vykonaj_tah(void *data) {
     auto *hrac = (DATA_HRACI *) data;
 
@@ -78,135 +132,47 @@ void *vykonaj_tah(void *data) {
         active_socket_write(hrac->socket, "vypis");
         active_socket_read(hrac->socket);
 
-        switch (hrac->socket->data.back()) {
-            case "1":
-                int hod = rand() % 6 + 1;
-                int panacikovia_na_doske = 0;
-                for (int i = 0; i < 4; ++i) {
-                    if (hrac->pozicie_panacikov[i] >= 0 && hrac->pozicie_panacikov[i] < BOARD_SIZE) {
-                        panacikovia_na_doske++;
-                    }
+        int tah = stoi(hrac->socket->data.back());
+        if (tah == 1) {
+
+            int hod = rand() % 6 + 1;
+            int panacikovia_na_doske = 0;
+            for (int i = 0; i < 4; ++i) {
+                if (hrac->pozicie_panacikov[i] >= 0 && hrac->pozicie_panacikov[i] < BOARD_SIZE) {
+                    panacikovia_na_doske++;
                 }
-                sleep(3);
-                cout << "Hrac (" << hrac->id << ") hodil " << hod << "." << endl;
+            }
 
-                if (hod < 6) {
-                    // server sa opyta klienta, ktorym panacikom sa chce pohnut
-                    active_socket_write(hrac->socket, "hod");
-                    active_socket_write(hrac->socket, to_string(hod));
-                    active_socket_read(hrac->socket);
+            sleep(3);
+            cout << "Hrac (" << hrac->id << ") hodil " << hod << "." << endl;
 
-                    switch (hrac->socket->data.back()) {
-                        case "3":
-                            if (panacikovia_na_doske > 0) {
-                                int panacik = stoi(hrac->socket->data.back()) - 1;
-                                int povodnaPoloha = hrac->pozicie_panacikov[panacik];
-                                int novaPoloha = (hrac->pozicie_panacikov[panacik] + hod) % BOARD_SIZE;
-
-                                hrac->pozicie_panacikov[panacik] = novaPoloha;
-                                hrac->hracia_doska->aktualne_pozicie_panacikov[panacik + 4 * hrac->id] = novaPoloha;
-
-                                // ak panacik presiel celu cestu az do domceku
-                                if (hrac->prejdene_policka[panacik] > BOARD_SIZE) {
-                                    hrac->domcek[panacik] = true;
-                                    hrac->pozicie_panacikov[panacik] = 999;
-                                    move_player(hrac->hracia_doska->doska, povodnaPoloha, 999, hrac->target);
-                                    cout << "Panacik hraca (" << hrac->id << ") sa dostal do domceka." << endl;
-                                } else {
-                                    move_player(hrac->hracia_doska->doska, povodnaPoloha, novaPoloha, hrac->target);
-                                    cout << "Hrac (" << hrac->id << ") sa pohol panacikom " << panacik << "." << endl;
-                                }
-
-                                // aktualizacia pozicie panacika daneho hraca
-                                broadcast_message(hrac->hracia_doska->hraci,
-                                                  serialize_doska(hrac->hracia_doska->doska));
-                            } else {
-                                cout << "Hrac (" << hrac->id << ") sa nema s kym pohnut." << endl;
-                            }
-                            break;
-                        case "5":
-                            broadcast_message(hrac->hracia_doska->hraci, "koniec");
-                            active_socket_destroy(hrac->socket);
-                            hrac->hracia_doska->pocet_hrajucich_hracov--;
-                            break;
-                        default:
-                            active_socket_write(hrac->socket, "Neplatna moznost!");
-                            break;
-                    }
-                } else {
-                    active_socket_write(hrac->socket, "hod_sestku");
-                    active_socket_write(hrac->socket, to_string(hod));
-                    active_socket_read(hrac->socket);
-
-                    switch (hrac->socket->data.back()) {
-                        case "3":
-                            if (panacikovia_na_doske > 0) {
-                                int panacik = stoi(hrac->socket->data.back()) - 1;
-                                int povodnaPoloha = hrac->pozicie_panacikov[panacik];
-                                int novaPoloha = (hrac->pozicie_panacikov[panacik] + hod) % BOARD_SIZE;
-
-                                hrac->pozicie_panacikov[panacik] = novaPoloha;
-                                hrac->hracia_doska->aktualne_pozicie_panacikov[panacik + 4 * hrac->id] = novaPoloha;
-
-                                // ak panacik presiel celu cestu az do domceku
-                                if (hrac->prejdene_policka[panacik] > BOARD_SIZE) {
-                                    hrac->domcek[panacik] = true;
-                                    hrac->pozicie_panacikov[panacik] = 999;
-                                    move_player(hrac->hracia_doska->doska, povodnaPoloha, 999, hrac->target);
-                                    cout << "Panacik hraca (" << hrac->id << ") sa dostal do domceka." << endl;
-                                } else {
-                                    move_player(hrac->hracia_doska->doska, povodnaPoloha, novaPoloha, hrac->target);
-                                    cout << "Hrac (" << hrac->id << ") sa pohol panacikom " << panacik << "." << endl;
-                                }
-
-                                // aktualizacia pozicie panacika daneho hraca
-                                broadcast_message(hrac->hracia_doska->hraci,
-                                                  serialize_doska(hrac->hracia_doska->doska));
-                            } else {
-                                cout << "Hrac (" << hrac->id << ") sa nema s kym pohnut." << endl;
-                            }
-                            break;
-                        case "4":
-                            int start = daj_startovacie_policko(hrac->id);
-
-                            // ak je niekto na startovacom policku daneho hraca, vyhod ho
-                            for (int i = 0; i < 16; ++i) {
-                                if (hrac->hracia_doska->aktualne_pozicie_panacikov[i] == start) {
-                                    hrac->hracia_doska->aktualne_pozicie_panacikov[i] = -1;
-                                    move_player(hrac->hracia_doska->doska, start, -1, hrac->target);
-                                    break;
-                                }
-                            }
-                            for (int i = 0; i < 4; ++i) {
-                                if (hrac->pozicie_panacikov[i] < 0) {
-                                    hrac->pozicie_panacikov[i] = start;
-                                    hrac->hracia_doska->aktualne_pozicie_panacikov[i + 4 * hrac->id] = start;
-                                    move_player(hrac->hracia_doska->doska, -1, start, hrac->target);
-                                    break;
-                                }
-                            }
-                            broadcast_message(hrac->hracia_doska->hraci, serialize_doska(hrac->hracia_doska->doska));
-                            cout << "Hrac (" << hrac->id << ") pridava svojho panacika na startovacie policko." << endl;
-                            break;
-                        case "5":
-                            broadcast_message(hrac->hracia_doska->hraci, "koniec");
-                            active_socket_destroy(hrac->socket);
-                            hrac->hracia_doska->pocet_hrajucich_hracov--;
-                            break;
-                        default:
-                            active_socket_write(hrac->socket, "Neplatna moznost!");
-                            break;
-                    }
-                    break;
+            if (hod < 6) {
+                // server sa opyta klienta, ktorym panacikom sa chce pohnut
+                active_socket_write(hrac->socket, "hod");
+                active_socket_write(hrac->socket, to_string(hod));
+                active_socket_read(hrac->socket);
+                tah = stoi(hrac->socket->data.back());
+                if (tah == 3) {
+                    zvladaj_ukon(3, panacikovia_na_doske, hod, hrac);
+                } else if (tah == 5) {
+                    zvladaj_ukon(5, panacikovia_na_doske, hod, hrac);
                 }
-            case "5":
-                broadcast_message(hrac->hracia_doska->hraci, "koniec");
-                active_socket_destroy(hrac->socket);
-                hrac->hracia_doska->pocet_hrajucich_hracov--;
-                break;
-            default:
-                active_socket_write(hrac->socket, "Neplatna moznost!");
-                break;
+            } else {
+                active_socket_write(hrac->socket, "hod_sestku");
+                active_socket_write(hrac->socket, to_string(hod));
+                active_socket_read(hrac->socket);
+                tah = stoi(hrac->socket->data.back());
+                if (tah == 3) {
+                    zvladaj_ukon(3, panacikovia_na_doske, hod, hrac);
+                } else if (tah == 4) {
+                    zvladaj_ukon(4, panacikovia_na_doske, hod, hrac);
+                } else if (tah == 5) {
+                    zvladaj_ukon(5, panacikovia_na_doske, hod, hrac);
+                }
+            }
+
+        } else if(tah == 5) {
+            zvladaj_ukon(5, 0, 0, hrac);
         }
 
         int pocetVDomceku = 0;
@@ -272,6 +238,8 @@ int main(int argc, char *argv[]) {
     DATA_HRACI data_hraci[NUMBER_OF_PLAYERS];
     pthread_t hraci[NUMBER_OF_PLAYERS];
 
+
+
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         data_hraci[i].id = i;
         data_hraci[i].socket = &clients[i];
@@ -291,9 +259,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         pthread_join(hraci[i], nullptr);
     }
-
     pthread_mutex_destroy(&mutex);
-    pthread_mutex_destroy(&je_tah_hraca);
 
     return 0;
 }
