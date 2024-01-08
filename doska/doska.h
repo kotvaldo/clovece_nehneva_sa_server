@@ -55,7 +55,7 @@ typedef struct doska {
             {0,  5}
     };
 
-} DOSKA_DATA;
+}DOSKA_DATA;
 
 void doska_initial(struct doska *doska);
 
@@ -65,6 +65,6 @@ void print_doska(struct doska *doska);
 
 string serialize_doska(struct doska *doska);
 
-void move_player(struct doska *doska, int povodnaPoloha, int novaPoloha, char target);
+void move_player( struct doska *doska, int povodnaPoloha, int novaPoloha, char target);
 
 #endif //CLOVECE_NEHNEVA_SA_SERVER_DOSKA_H

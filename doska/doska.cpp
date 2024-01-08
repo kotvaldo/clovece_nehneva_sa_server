@@ -67,6 +67,8 @@ string serialize_doska(struct doska *doska) {
 void move_player(struct doska *doska, int povodnaPoloha, int novaPoloha, char target) {
     if (povodnaPoloha == -1) {
         doska->pole_field[doska->pole_suradnic[novaPoloha][0]][doska->pole_suradnic[novaPoloha][1]] = target;
+    } else if (novaPoloha == 999) {
+        doska->pole_field[doska->pole_suradnic[povodnaPoloha][0]][doska->pole_suradnic[povodnaPoloha][1]] = '*';
     } else {
         doska->pole_field[doska->pole_suradnic[novaPoloha][0]][doska->pole_suradnic[novaPoloha][1]] = target;
         doska->pole_field[doska->pole_suradnic[povodnaPoloha][0]][doska->pole_suradnic[povodnaPoloha][1]] = '*';
