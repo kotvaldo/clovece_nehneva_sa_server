@@ -26,12 +26,19 @@ typedef struct data_hraci {
     int id;
     active_socket *socket;
     int *pozicie_panacikov;
+    int prejdene_policka[NUMBER_OF_PLAYERS];
     bool vyhral;
     HRACIA_DOSKA *hracia_doska;
     pthread_mutex_t *mutex;
     pthread_cond_t *je_tah_hraca;
 } DATA_HRACI;
 
+
+void broadcast_message(struct active_socket *hraci, const string& message) {
+    for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+        active_socket_write(&hraci[i], message);
+    }
+}
 
 int daj_startovacie_policko(int id) {
     switch (id) {
@@ -227,12 +234,13 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         data_hraci[i].id = i + 1;
         data_hraci[i].socket = &clients[i];
-        data_hraci[i].pozicie_panacikov = {-1, -1, -1, -1};
-        data_hraci[i].prejdene_policka = {0, 0, 0, 0};
+        for (int j = 0; j < 4; ++j) {
+            data_hraci[i].prejdene_policka[j] = 0;
+        }
         data_hraci[i].vyhral = false;
-        data_hraci[i].hracia_doska = hracia_doska;
-        data_hraci[i].mutex = mutex;
-        data_hraci[i].je_tah_hraca = je_tah_hraca;
+        data_hraci[i].hracia_doska = &hracia_doska;
+        data_hraci[i].mutex = &mutex;
+        data_hraci[i].je_tah_hraca = &je_tah_hraca;
         pthread_create(&hraci[i], nullptr, vykonaj_tah, &data_hraci[i]);
     }
 
