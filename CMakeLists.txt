@@ -7,4 +7,8 @@ add_executable(clovece_nehneva_sa_server server.cpp
         sockets/passive_socket.cpp
         sockets/passive_socket.h
         sockets/active_socket.cpp
-        sockets/active_socket.h)
+        sockets/active_socket.h
+        doska/doska.cpp
+        doska/doska.h
+        doska/doska.cpp
+        doska/doska.h)

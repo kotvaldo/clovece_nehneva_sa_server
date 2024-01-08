@@ -10,32 +10,41 @@
 
 #define NUMBER_OF_PLAYERS 4
 #define BOARD_SIZE 40
+using namespace std;
+
 
 typedef struct hracia_doska {
-    int *pocet_hrajucich_hracov;
+    int pocet_hrajucich_hracov;
     active_socket *hraci;
-    int *tah_hraca;
-    int pocet_policok;
+    int tah_hraca;
     int *aktualne_pozicie_panacikov;
-    bool *cesta;
-    bool *domcek_1;
-    bool *domcek_2;
-    bool *domcek_3;
-    bool *domcek_4;
 } HRACIA_DOSKA;
 
 typedef struct data_hraci {
     int id;
     active_socket *socket;
     int *pozicie_panacikov;
-    int *prejdene_policka;
     bool vyhral;
     HRACIA_DOSKA *hracia_doska;
     pthread_mutex_t *mutex;
     pthread_cond_t *je_tah_hraca;
 } DATA_HRACI;
 
-using namespace std;
+
+int daj_startovacie_policko(int id) {
+    switch (id) {
+        case 1:
+            return 0;
+        case 2:
+            return 10;
+        case 3:
+            return 20;
+        case 4:
+            return 30;
+        default:
+            return -1;
+    }
+}
 
 void *vykonaj_tah(void *data) {
     auto *hrac = (DATA_HRACI *) data;
@@ -47,15 +56,15 @@ void *vykonaj_tah(void *data) {
     pthread_mutex_lock(hrac->mutex);
     while (!hrac->vyhral && hrac->hracia_doska->pocet_hrajucich_hracov == NUMBER_OF_PLAYERS) {
         pthread_mutex_unlock(hrac->mutex);
-        Sleep(3);
+        sleep(3);
         cout << "Hrac (" << hrac->id << ") je na rade." << endl;
-        active_socket_write_data(hrac->socket, "vypis");
-        active_socket_start_reading(hrac->socket);
+        active_socket_write(hrac->socket, "vypis");
+        active_socket_read(hrac->socket);
 
-        int hod = rand() % 6 + 1;
 
         switch (hrac->socket->data.back()) {
             case "1":
+                int hod = rand() % 6 + 1;
                 int panacikovia_na_doske = 0;
                 for (int i = 0; i < 4; ++i) {
                     if (hrac->pozicie_panacikov[i] >= 0 &&
@@ -63,16 +72,16 @@ void *vykonaj_tah(void *data) {
                         panacikovia_na_doske++;
                     }
                 }
-                Sleep(3);
+                sleep(3);
                 cout << "Hrac (" << hrac->id << ") hodil " << hod << "." << endl;
-                active_socket_write_data(hrac->socket, "moznosti");
-                active_socket_start_reading(hrac->socket);
+                active_socket_write(hrac->socket, "moznosti");
+                active_socket_read(hrac->socket);
 
-                switch(hrac->socket->data.back()) {
+                switch (hrac->socket->data.back()) {
                     case "3":
                         // server sa opyta klienta, ktorym panacikom sa chce pohnut
-                        active_socket_write_data(hrac->socket, "hod");
-                        active_socket_start_reading(hrac->socket);
+                        active_socket_write(hrac->socket, "hod");
+                        active_socket_read(hrac->socket);
                         if (panacikovia_na_doske > 0) {
                             int panacik = stoi(hrac->socket->data.back() - 1);
                             hrac->hracia_doska->cesta[hrac->pozicie_panacikov[panacik]] = false;
@@ -85,8 +94,8 @@ void *vykonaj_tah(void *data) {
                         break;
 
                     case "4":
-                        active_socket_write_data(hrac->socket, "novy");
-                        active_socket_start_reading(hrac->socket);
+                        active_socket_write(hrac->socket, "novy");
+                        active_socket_read(hrac->socket);
                         if (hod == 6) {
                             int pozicia = daj_startovacie_policko(hrac->id);
                             // ak je niekto na startovacom policku daneho hraca
@@ -135,9 +144,9 @@ void *vykonaj_tah(void *data) {
 
                 if (panacikovia_na_doske > 0) {
                     // server sa opyta klienta, ktorym panacikom sa chce pohnut
-                    active_socket_write_data(hrac->socket, "Zadajte cislo panacika: \n");
+                    active_socket_write(hrac->socket, "Zadajte cislo panacika: \n");
                     // klient posle feedback
-                    active_socket_start_reading(hrac->socket);
+                    active_socket_read(hrac->socket);
                     int panacik = stoi(hrac->socket->data.back() - 1);
                     hrac->pozicie_panacikov[panacik] += hod;
                     cout << "Hrac (" << hrac->id << ") sa pohol panacikom " << panacik << "." << endl;
@@ -157,7 +166,7 @@ void *vykonaj_tah(void *data) {
                 break;
 
             default:
-                active_socket_write_data(hrac->socket, "Neplatna moznost!");
+                active_socket_write(hrac->socket, "Neplatna moznost!");
                 break;
         }
     }
@@ -166,29 +175,61 @@ void *vykonaj_tah(void *data) {
     return nullptr;
 }
 
-int daj_startovacie_policko(int id) {
-    switch (id) {
-        case 1:
-            return 0;
-        case 2:
-            return 10;
-        case 3:
-            return 20;
-        case 4:
-            return 30;
-        default:
-            return -1;
-    }
-}
 
 int main(int argc, char *argv[]) {
     passive_socket passiveSocket{10};
     active_socket clients[NUMBER_OF_PLAYERS];
 
+    const int n = 11;
+    char doska[n][n];
+    std::vector<std::vector<int>> pole_suradnic = {
+            {0,  0},  // toto nikdy nedavaj, to je aby som ti zosynchronizoval pozicie od 1 po 40 , nie od 0 po 39
+            {0,  6}, //zaciatok pre niekoho , 1
+            {1,  6},
+            {2,  6},
+            {3,  6},
+            {4,  6},
+            {4,  7},
+            {4,  8},
+            {4,  9},
+            {4,  10},
+            {5,  10},
+            {6,  10}, //zaciatok pre niekoho
+            {6,  9},
+            {6,  8},
+            {6,  7},
+            {6,  6},
+            {7,  6},
+            {8,  6},
+            {9,  6},
+            {10, 6},
+            {10, 5},
+            {10, 4}, // zaciatok pre niekoho
+            {9,  4},
+            {8,  4},
+            {7,  4},
+            {6,  4},
+            {6,  3},
+            {6,  2},
+            {6,  1},
+            {6,  0},
+            {5,  0},
+            {4,  0}, //zaciatok pre niekoho
+            {4,  1},
+            {4,  2},
+            {4,  3},
+            {4,  4},
+            {3,  4},
+            {2,  4},
+            {1,  4},
+            {0,  4},
+            {0,  5}
+
+    };
     passive_socket_init(&passiveSocket);
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         active_socket_init(&clients[i]);
-    }
+    };
 
     if (passive_socket_bind(&passiveSocket)) {
         if (passive_socket_listen(&passiveSocket)) {
@@ -198,8 +239,8 @@ int main(int argc, char *argv[]) {
                 passive_socket_wait_for_clients(&passiveSocket, &clients[3]) {
                 cout << endl << "All players has successfully joined. Game can start." << endl;
             }
-        } else return 1;
-    } else return 1;
+        }
+    }
 
     active_socket_read(&clients[0]);
     for (int i = 0; i < &clients[0].data.size(); ++i) {
@@ -225,13 +266,13 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 4; ++i) {
         domcek[i] = false;
     }
-    int *pozicie_panacikov[16];
+    int pozicie_panacikov[16];
     for (int i = 0; i < 16; ++i) {
         pozicie_panacikov[i] = -1;
     }
 
     HRACIA_DOSKA hracia_doska = {
-            NUMBER_OF_PLAYERS, &clients, 1, BOARD_SIZE, pozicie_panacikov, cesta, domcek, domcek, domcek, domcek
+            NUMBER_OF_PLAYERS, clients, 1, pozicie_panacikov
     };
 
     // inicializacia dat hracov
@@ -240,7 +281,7 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         data_hraci[i].id = i + 1;
-        data_hraci[i].socket = clients[i];
+        data_hraci[i].socket = &clients[i];
         data_hraci[i].pozicie_panacikov = {-1, -1, -1, -1};
         data_hraci[i].prejdene_policka = {0, 0, 0, 0};
         data_hraci[i].vyhral = false;
