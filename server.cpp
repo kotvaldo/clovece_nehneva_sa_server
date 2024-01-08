@@ -15,6 +15,7 @@ typedef struct hracia_doska {
     int *pocet_hrajucich_hracov;
     int *tah_hraca;
     int pocet_policok;
+    int *aktualne_pozicie_panacikov;
     bool *cesta;
     bool *domcek_1;
     bool *domcek_2;
@@ -27,6 +28,7 @@ typedef struct data_hraci {
     active_socket *socket;
     int *panacikovia;
     int *pozicie_panacikov;
+    int *prejdene_policka;
     bool vyhral;
     HRACIA_DOSKA *hracia_doska;
     pthread_mutex_t *mutex;
@@ -79,7 +81,8 @@ void *vykonaj_tah(void *data) {
             active_socket_write_data(hrac->socket, "Zadajte cislo panacika: \n");
             // klient posle feedback
             active_socket_start_reading(hrac->socket);
-            int panacik = stoi(hrac->socket->data.back());
+            int panacik = stoi(hrac->socket->data.back() - 1);
+            hrac->pozicie_panacikov[panacik] += hod;
             cout << "Hrac (" << hrac->id << ") sa pohol panacikom " << panacik << "." << endl;
         }
 
@@ -166,7 +169,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         data_hraci[i].id = i + 1;
         data_hraci[i].socket = clients[i];
-        data_hraci[i].panacikovia = {1, 2, 3, 4};
+        data_hraci[i].panacikovia = {1 + i * NUMBER_OF_PLAYERS, 2 + i * NUMBER_OF_PLAYERS, 3 + i * NUMBER_OF_PLAYERS, 4 + i * NUMBER_OF_PLAYERS};
         data_hraci[i].pozicie_panacikov = {-1, -1, -1, -1};
         data_hraci[i].vyhral = false;
         data_hraci[i].hracia_doska = hracia_doska;
