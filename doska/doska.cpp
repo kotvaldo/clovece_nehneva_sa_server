@@ -8,51 +8,6 @@
 
 void doska_initial(struct doska *doska) {
     int npol = n / 2;
-    doska->pole_suradnic = {
-            {0,0},  // toto nikdy nedavaj, to je aby som ti zosynchronizoval pozicie od 1 po 40 , nie od 0 po 39
-            {0,  6}, //zaciatok pre niekoho , 1
-            {1,  6},
-            {2,  6},
-            {3,  6},
-            {4,  6},
-            {4,  7},
-            {4,  8},
-            {4,  9},
-            {4,  10},
-            {5,  10},
-            {6,  10}, //zaciatok pre niekoho
-            {6,  9},
-            {6,  8},
-            {6,  7},
-            {6,  6},
-            {7,  6},
-            {8,  6},
-            {9,  6},
-            {10, 6},
-            {10, 5},
-            {10, 4}, // zaciatok pre niekoho
-            {9,  4},
-            {8,  4},
-            {7,  4},
-            {6,  4},
-            {6,  3},
-            {6,  2},
-            {6,  1},
-            {6,  0},
-            {5,  0},
-            {4,  0}, //zaciatok pre niekoho
-            {4,  1},
-            {4,  2},
-            {4,  3},
-            {4,  4},
-            {3,  4},
-            {2,  4},
-            {1,  4},
-            {0,  4},
-            {0,  5}
-
-    };
-
 
     for (int i = 0; i < n; ++i) {
         doska->pole_field[npol - 1][i] = '*';
@@ -76,21 +31,44 @@ void doska_initial(struct doska *doska) {
     doska->pole_field[npol][npol] = 'X';
 }
 
+void doska_destroy(struct doska *doska) {
+    doska->pole_suradnic.clear();
+    free(doska->pole_field);
+}
 
-void print_doska(struct doska **doska) {
-
+void print_doska(struct doska *doska) {
+    cout << endl;
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            cout << doska->pole_field[i][j] << ' ';
+        }
+        cout << endl;
+    }
+    cout << endl;
 
 }
 
 string serialize_doska(struct doska *doska) {
+    ostringstream ss;
+    ss << endl;
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            ss << doska->pole_field[i][j] << ' ';
+        }
+        ss << endl;
+    }
+    ss << endl;
 
+    return ss.str();
 
 
 }
 
-void move_player( struct doska *doska, int povodnaPoloha, int novaPoloha, char target) {
-
-
-
-
+void move_player(struct doska *doska, int povodnaPoloha, int novaPoloha, char target) {
+    if (povodnaPoloha == -1) {
+        doska->pole_field[doska->pole_suradnic[novaPoloha][0]][doska->pole_suradnic[novaPoloha][1]] = target;
+    } else {
+        doska->pole_field[doska->pole_suradnic[novaPoloha][0]][doska->pole_suradnic[novaPoloha][1]] = target;
+        doska->pole_field[doska->pole_suradnic[povodnaPoloha][0]][doska->pole_suradnic[povodnaPoloha][1]] = '*';
+    }
 }

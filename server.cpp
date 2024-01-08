@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <vector>
 #include "sockets/passive_socket.h"
+#include "doska/doska.h"
 
 #define NUMBER_OF_PLAYERS 4
 #define BOARD_SIZE 40
@@ -18,6 +19,7 @@ typedef struct hracia_doska {
     active_socket *hraci;
     int tah_hraca;
     int *aktualne_pozicie_panacikov;
+    DOSKA_DATA *doska;
 } HRACIA_DOSKA;
 
 typedef struct data_hraci {
@@ -180,52 +182,8 @@ int main(int argc, char *argv[]) {
     passive_socket passiveSocket{10};
     active_socket clients[NUMBER_OF_PLAYERS];
 
-    const int n = 11;
-    char doska[n][n];
-    std::vector<std::vector<int>> pole_suradnic = {
-            {0,  0},  // toto nikdy nedavaj, to je aby som ti zosynchronizoval pozicie od 1 po 40 , nie od 0 po 39
-            {0,  6}, //zaciatok pre niekoho , 1
-            {1,  6},
-            {2,  6},
-            {3,  6},
-            {4,  6},
-            {4,  7},
-            {4,  8},
-            {4,  9},
-            {4,  10},
-            {5,  10},
-            {6,  10}, //zaciatok pre niekoho
-            {6,  9},
-            {6,  8},
-            {6,  7},
-            {6,  6},
-            {7,  6},
-            {8,  6},
-            {9,  6},
-            {10, 6},
-            {10, 5},
-            {10, 4}, // zaciatok pre niekoho
-            {9,  4},
-            {8,  4},
-            {7,  4},
-            {6,  4},
-            {6,  3},
-            {6,  2},
-            {6,  1},
-            {6,  0},
-            {5,  0},
-            {4,  0}, //zaciatok pre niekoho
-            {4,  1},
-            {4,  2},
-            {4,  3},
-            {4,  4},
-            {3,  4},
-            {2,  4},
-            {1,  4},
-            {0,  4},
-            {0,  5}
+    DOSKA_DATA doska;
 
-    };
     passive_socket_init(&passiveSocket);
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         active_socket_init(&clients[i]);
@@ -236,17 +194,11 @@ int main(int argc, char *argv[]) {
             if (passive_socket_wait_for_clients(&passiveSocket, &clients[0]) &&
                 passive_socket_wait_for_clients(&passiveSocket, &clients[1]) &&
                 passive_socket_wait_for_clients(&passiveSocket, &clients[2]) &&
-                passive_socket_wait_for_clients(&passiveSocket, &clients[3]) {
+                passive_socket_wait_for_clients(&passiveSocket, &clients[3])) {
                 cout << endl << "All players has successfully joined. Game can start." << endl;
             }
         }
     }
-
-    active_socket_read(&clients[0]);
-    for (int i = 0; i < &clients[0].data.size(); ++i) {
-        cout << &clients[0].data[i] << endl;
-    }
-    active_socket_write(&clients[0], "vajico");
 
     // herna logika
     srand(time(nullptr));
@@ -258,21 +210,14 @@ int main(int argc, char *argv[]) {
     pthread_cond_init(&je_tah_hraca, nullptr);
 
     // inicializacia hracej dosky
-    bool cesta[BOARD_SIZE];
-    for (int i = 0; i < BOARD_SIZE; ++i) {
-        cesta[i] = false;
-    }
-    bool domcek[4];
-    for (int i = 0; i < 4; ++i) {
-        domcek[i] = false;
-    }
+
     int pozicie_panacikov[16];
     for (int i = 0; i < 16; ++i) {
         pozicie_panacikov[i] = -1;
     }
 
     HRACIA_DOSKA hracia_doska = {
-            NUMBER_OF_PLAYERS, clients, 1, pozicie_panacikov
+            NUMBER_OF_PLAYERS, clients, 1, pozicie_panacikov, &doska
     };
 
     // inicializacia dat hracov
