@@ -252,9 +252,12 @@ int main(int argc, char *argv[]) {
                     pthread_join(hraci[i], nullptr);
                 }
                 pthread_mutex_destroy(&mutex);
+                pthread_cond_destroy(&je_tah_hraca);
 
                 return 0;
             }
         }
     }
+    
+    return -1;
 }
