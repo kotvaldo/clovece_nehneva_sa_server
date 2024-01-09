@@ -5,11 +5,9 @@
 #include "doska.h"
 #define n 11
 
-
 void doska_initial(struct doska *doska) {
-
-    for (int i = 0; i < 11; ++i) {
-        for (int j = 0; j < 11; ++j) {
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
             doska->pole_field[i][j] = ' ';
         }
     }
@@ -33,7 +31,7 @@ void doska_initial(struct doska *doska) {
         doska->pole_field[i][npol] = 'D';
         doska->pole_field[n - i - 1][npol] = 'D';
     }
-
+    
     doska->pole_field[npol][npol] = 'X';
 }
 
@@ -51,7 +49,6 @@ void print_doska(struct doska *doska) {
         cout << endl;
     }
     cout << endl;
-
 }
 
 string serialize_doska(struct doska *doska) {
@@ -62,10 +59,7 @@ string serialize_doska(struct doska *doska) {
         }
         ss << endl;
     }
-
     return ss.str();
-
-
 }
 
 void move_player(struct doska *doska, int povodnaPoloha, int novaPoloha, char target) {
