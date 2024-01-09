@@ -58,7 +58,7 @@ void active_socket_read(struct active_socket *self) {
 
     fd_set sockets;
     struct timeval tv;
-    tv.tv_sec = 1;  // Nastavte vhodný čas čakania
+    tv.tv_sec = 100;  // Nastavte vhodný čas čakania
 
     while (active_socket_is_reading(self)) {
         FD_ZERO(&sockets);
@@ -75,7 +75,7 @@ void active_socket_read(struct active_socket *self) {
         }
 
         if (result > 0) {
-            char* buffer = (char*)calloc(100, sizeof(char));
+            char* buffer = (char*)calloc(255, sizeof(char));
 
             ssize_t bytesRead = read(self->socket_descriptor, buffer, 100);
 
@@ -119,7 +119,14 @@ void active_socket_write(struct active_socket *self, string message) {
 
     message.copy(buffer, message.size());
     buffer[data_length] = SOCKET_TERMINATE_CHAR;
-    write(self->socket_descriptor, buffer, sizeof(buffer));
+
+    int result = send(self->socket_descriptor, buffer, data_length + 1, 0);
+    if (result < 0) {
+        perror("send failed.");
+        // Handle the error appropriately
+    }
+
+    free(buffer);
     pthread_mutex_unlock(&self->mutex_writing);
 }
 

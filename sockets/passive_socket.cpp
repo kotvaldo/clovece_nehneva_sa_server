@@ -5,7 +5,7 @@
 
 #include "passive_socket.h"
 
-#define PORT 11000
+#define PORT 12000
 
 
 bool passive_socket_init(struct passive_socket *passiveSocket) {

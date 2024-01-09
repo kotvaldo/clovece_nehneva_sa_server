@@ -17,7 +17,7 @@
 using namespace std;
 
 struct active_socket {
-    int id{};
+    int id = 0;
     int socket_descriptor = -1;
     string end_message;
     bool is_reading = false;
