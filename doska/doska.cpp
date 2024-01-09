@@ -7,6 +7,12 @@
 
 
 void doska_initial(struct doska *doska) {
+
+    for (int i = 0; i < 11; ++i) {
+        for (int j = 0; j < 11; ++j) {
+            doska->pole_field[i][j] = ' ';
+        }
+    }
     int npol = n / 2;
 
     for (int i = 0; i < n; ++i) {
@@ -50,14 +56,12 @@ void print_doska(struct doska *doska) {
 
 string serialize_doska(struct doska *doska) {
     ostringstream ss;
-    ss << endl;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            ss << doska->pole_field[i][j] << ' ';
+            ss << doska->pole_field[i][j];
         }
         ss << endl;
     }
-    ss << endl;
 
     return ss.str();
 

@@ -6,7 +6,7 @@
 #include "doska/doska.h"
 #include "pthread.h"
 
-#define NUMBER_OF_PLAYERS 1
+#define NUMBER_OF_PLAYERS 4
 #define BOARD_SIZE 40
 using namespace std;
 
@@ -128,17 +128,10 @@ void *vykonaj_tah(void *data) {
     pthread_mutex_lock(hrac->mutex);
     while (!hrac->vyhral && hrac->hracia_doska->pocet_hrajucich_hracov == NUMBER_OF_PLAYERS) {
         pthread_mutex_unlock(hrac->mutex);
-        while(prebiehaKolo) {
-
-            while (hrac->hracia_doska->tah_hraca != hrac->id) {
-                pthread_cond_wait(hrac->je_tah_hraca, hrac->mutex);
-                // aktualizacia pozicii panacikov, ak niekto vyhodil hracovi
-            }
-
+        while(hrac->hracia_doska->tah_hraca == hrac->id+1) {
             for (int i = 0; i < 4; ++i) {
                 hrac->pozicie_panacikov[i] = hrac->hracia_doska->aktualne_pozicie_panacikov[i + 4 * hrac->id];
             }
-            sleep(3);
             cout << "Hrac (" << hrac->id << ") je na rade." << endl;
             active_socket_write(hrac->socket, "vypis");
             active_socket_read(hrac->socket);
@@ -154,7 +147,6 @@ void *vykonaj_tah(void *data) {
                     }
                 }
 
-                sleep(3);
                 cout << "Hrac (" << hrac->id << ") hodil " << hod << "." << endl;
 
                 if (hod < 6) {
@@ -169,16 +161,13 @@ void *vykonaj_tah(void *data) {
                         zvladaj_ukon(5, panacikovia_na_doske, hod, hrac);
                     }
                 } else {
-                    active_socket_write(hrac->socket, "hod_sestku");
-                    active_socket_write(hrac->socket, to_string(hod));
+                    active_socket_write(hrac->socket, "hodsestku");
                     active_socket_read(hrac->socket);
                     tah = stoi(hrac->socket->data.back());
                     if (tah == 3) {
                         zvladaj_ukon(3, panacikovia_na_doske, hod, hrac);
                     } else if (tah == 4) {
                         zvladaj_ukon(4, panacikovia_na_doske, hod, hrac);
-                    } else if (tah == 5) {
-                        zvladaj_ukon(5, panacikovia_na_doske, hod, hrac);
                     }
                 }
 
@@ -186,12 +175,12 @@ void *vykonaj_tah(void *data) {
                 zvladaj_ukon(5, 0, 0, hrac);
             }
 
-
             // prepnutie tahu hraca
             pthread_mutex_unlock(hrac->mutex);
             hrac->hracia_doska->tah_hraca = (hrac->hracia_doska->tah_hraca + 1) % 4 + 1;
-            prebiehaKolo = false;
             pthread_cond_broadcast(hrac->je_tah_hraca);
+            active_socket_write(hrac->socket, serialize_doska(hrac->hracia_doska->doska));
+            print_doska(hrac->hracia_doska->doska);
             pthread_mutex_lock(hrac->mutex);
 
         }
@@ -213,14 +202,16 @@ int main(int argc, char *argv[]) {
     active_socket clients[NUMBER_OF_PLAYERS];
 
     DOSKA_DATA doska;
+    doska_initial(&doska);
+
 
     passive_socket_init(&passiveSocket);
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         clients[i].id = i + 1;
         active_socket_init(&clients[i]);
-    };
+    }
 
-    /*
+
     if (passive_socket_bind(&passiveSocket)) {
         if (passive_socket_listen(&passiveSocket)) {
             if (passive_socket_wait_for_clients(&passiveSocket, &clients[0]) &&
@@ -228,62 +219,63 @@ int main(int argc, char *argv[]) {
                 passive_socket_wait_for_clients(&passiveSocket, &clients[2]) &&
                 passive_socket_wait_for_clients(&passiveSocket, &clients[3])) {
                 cout << endl << "All players has successfully joined. Game can start." << endl;
+                srand(time(nullptr));
+
+                // inicializacia mutexov a conditionov
+                pthread_mutex_t mutex;
+                pthread_mutex_init(&mutex, nullptr);
+                pthread_cond_t je_tah_hraca;
+                pthread_cond_init(&je_tah_hraca, nullptr);
+
+                // inicializacia hracej dosky
+
+                int pozicie_panacikov[16];
+                for (int i = 0; i < 16; ++i) {
+                    pozicie_panacikov[i] = -1;
+                }
+
+                HRACIA_DOSKA hracia_doska = {
+                        NUMBER_OF_PLAYERS, clients, 1, pozicie_panacikov, &doska
+                };
+
+                // inicializacia dat hracov
+                DATA_HRACI data_hraci[NUMBER_OF_PLAYERS];
+                pthread_t hraci[NUMBER_OF_PLAYERS];
+
+                data_hraci[0].target = 'A';
+                data_hraci[1].target = 'B';
+                data_hraci[2].target = 'C';
+                data_hraci[3].target = 'D';
+
+                for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+                    data_hraci[i].id = i;
+                    data_hraci[i].socket = &clients[i];
+                    for (int j = 0; j < 4; ++j) {
+                        data_hraci[i].pozicie_panacikov[j] = -1;
+                        data_hraci[i].prejdene_policka[j] = 0;
+                        data_hraci[i].domcek[j] = false;
+                    }
+                    data_hraci[i].vyhral = false;
+                    data_hraci[i].hracia_doska = &hracia_doska;
+                    data_hraci[i].mutex = &mutex;
+                    data_hraci[i].je_tah_hraca = &je_tah_hraca;
+                    pthread_create(&hraci[i], nullptr, vykonaj_tah, &data_hraci[i]);
+                }
+
+                for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
+                    pthread_join(hraci[i], nullptr);
+                }
+                pthread_mutex_destroy(&mutex);
+
+
+
+                return 0;
             }
         }
     }
-     */
+
 
 
     // herna logika
-    srand(time(nullptr));
 
-    // inicializacia mutexov a conditionov
-    pthread_mutex_t mutex;
-    pthread_mutex_init(&mutex, nullptr);
-    pthread_cond_t je_tah_hraca;
-    pthread_cond_init(&je_tah_hraca, nullptr);
-
-    // inicializacia hracej dosky
-
-    int pozicie_panacikov[16];
-    for (int i = 0; i < 16; ++i) {
-        pozicie_panacikov[i] = -1;
-    }
-
-    HRACIA_DOSKA hracia_doska = {
-            NUMBER_OF_PLAYERS, clients, 1, pozicie_panacikov, &doska
-    };
-
-    // inicializacia dat hracov
-    DATA_HRACI data_hraci[NUMBER_OF_PLAYERS];
-    pthread_t hraci[NUMBER_OF_PLAYERS];
-
-    data_hraci[0].target = 'A';
-    data_hraci[1].target = 'B';
-    data_hraci[2].target = 'C';
-    data_hraci[3].target = 'D';
-
-    for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-        data_hraci[i].id = i;
-        data_hraci[i].socket = &clients[i];
-        for (int j = 0; j < 4; ++j) {
-            data_hraci[i].pozicie_panacikov[j] = -1;
-            data_hraci[i].prejdene_policka[j] = 0;
-            data_hraci[i].domcek[j] = false;
-        }
-        data_hraci[i].vyhral = false;
-        data_hraci[i].hracia_doska = &hracia_doska;
-        data_hraci[i].mutex = &mutex;
-        data_hraci[i].je_tah_hraca = &je_tah_hraca;
-        pthread_create(&hraci[i], nullptr, vykonaj_tah, &data_hraci[i]);
-    }
-
-    for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
-        pthread_join(hraci[i], nullptr);
-    }
-    pthread_mutex_destroy(&mutex);
-
-
-
-    return 0;
 }
