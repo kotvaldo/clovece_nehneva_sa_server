@@ -5,8 +5,12 @@
 #include "doska.h"
 #define n 11
 
-
 void doska_initial(struct doska *doska) {
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            doska->pole_field[i][j] = ' ';
+        }
+    }
     int npol = n / 2;
 
     for (int i = 0; i < n; ++i) {
@@ -27,7 +31,7 @@ void doska_initial(struct doska *doska) {
         doska->pole_field[i][npol] = 'D';
         doska->pole_field[n - i - 1][npol] = 'D';
     }
-
+    
     doska->pole_field[npol][npol] = 'X';
 }
 
@@ -45,28 +49,24 @@ void print_doska(struct doska *doska) {
         cout << endl;
     }
     cout << endl;
-
 }
 
 string serialize_doska(struct doska *doska) {
     ostringstream ss;
-    ss << endl;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            ss << doska->pole_field[i][j] << ' ';
+            ss << doska->pole_field[i][j];
         }
         ss << endl;
     }
-    ss << endl;
-
     return ss.str();
-
-
 }
 
 void move_player(struct doska *doska, int povodnaPoloha, int novaPoloha, char target) {
     if (povodnaPoloha == -1) {
         doska->pole_field[doska->pole_suradnic[novaPoloha][0]][doska->pole_suradnic[novaPoloha][1]] = target;
+    } else if (novaPoloha == 999) {
+        doska->pole_field[doska->pole_suradnic[povodnaPoloha][0]][doska->pole_suradnic[povodnaPoloha][1]] = '*';
     } else {
         doska->pole_field[doska->pole_suradnic[novaPoloha][0]][doska->pole_suradnic[novaPoloha][1]] = target;
         doska->pole_field[doska->pole_suradnic[povodnaPoloha][0]][doska->pole_suradnic[povodnaPoloha][1]] = '*';

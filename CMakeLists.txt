@@ -12,3 +12,4 @@ add_executable(clovece_nehneva_sa_server server.cpp
         doska/doska.h
         doska/doska.cpp
         doska/doska.h)
+target_link_libraries(clovece_nehneva_sa_server pthread)
