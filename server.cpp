@@ -10,7 +10,6 @@
 #define BOARD_SIZE 40
 using namespace std;
 
-
 typedef struct hracia_doska {
     int pocet_hrajucich_hracov;
     active_socket *hraci;
@@ -32,22 +31,17 @@ typedef struct data_hraci {
     pthread_cond_t *je_tah_hraca;
 } DATA_HRACI;
 
-void destroy_data_hraci() {
-
-}
-
 void broadcast_message(struct active_socket *hraci, pthread_mutex_t *mutex, const string &message) {
     // Assuming hraci has at least NUMBER_OF_PLAYERS elements
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         // Ensure active_socket_write handles errors appropriately
-        try{
+        try {
             pthread_mutex_lock(mutex);
             active_socket_write(&hraci[i], message);
             pthread_mutex_unlock(mutex);
         } catch (const exception ex) {
 
         }
-
     }
 }
 
@@ -100,7 +94,6 @@ void zvladaj_ukon(int ukon, int panacikovia_na_doske, int hod, DATA_HRACI *hrac)
             if (hrac->hracia_doska->aktualne_pozicie_panacikov[i] == start) {
                 hrac->hracia_doska->aktualne_pozicie_panacikov[i] = -1;
                 move_player(hrac->hracia_doska->doska, start, -1, hrac->target);
-
             }
         }
         for (int i = 0; i < 4; ++i) {
@@ -110,17 +103,14 @@ void zvladaj_ukon(int ukon, int panacikovia_na_doske, int hod, DATA_HRACI *hrac)
                 move_player(hrac->hracia_doska->doska, -1, start, hrac->target);
             }
         }
-       // broadcast_message(hrac->hracia_doska->hraci, hrac->mutex,serialize_doska(hrac->hracia_doska->doska));
+        // broadcast_message(hrac->hracia_doska->hraci, hrac->mutex,serialize_doska(hrac->hracia_doska->doska));
         cout << "Hrac (" << hrac->id << ") pridava svojho panacika na startovacie policko." << endl;
     } else if (ukon == 5) {
-        //broadcast_message(hrac->hracia_doska->hraci,hrac->mutex,"koniec");
+        // broadcast_message(hrac->hracia_doska->hraci,hrac->mutex,"koniec");
         active_socket_destroy(hrac->socket);
         hrac->hracia_doska->pocet_hrajucich_hracov--;
-
     }
-
 }
-
 
 void *vykonaj_tah(void *data) {
     auto *hrac = (DATA_HRACI *) data;
@@ -138,7 +128,6 @@ void *vykonaj_tah(void *data) {
 
             int tah = stoi(hrac->socket->data.back());
             if (tah == 1) {
-
                 int hod = rand() % 6 + 1;
                 int panacikovia_na_doske = 0;
                 for (int i = 0; i < 4; ++i) {
@@ -170,7 +159,6 @@ void *vykonaj_tah(void *data) {
                         zvladaj_ukon(4, panacikovia_na_doske, hod, hrac);
                     }
                 }
-
             } else if(tah == 5) {
                 zvladaj_ukon(5, 0, 0, hrac);
             }
@@ -182,7 +170,6 @@ void *vykonaj_tah(void *data) {
             active_socket_write(hrac->socket, serialize_doska(hrac->hracia_doska->doska));
             print_doska(hrac->hracia_doska->doska);
             pthread_mutex_lock(hrac->mutex);
-
         }
 
         int pocetVDomceku = 0;
@@ -204,13 +191,11 @@ int main(int argc, char *argv[]) {
     DOSKA_DATA doska;
     doska_initial(&doska);
 
-
     passive_socket_init(&passiveSocket);
     for (int i = 0; i < NUMBER_OF_PLAYERS; ++i) {
         clients[i].id = i + 1;
         active_socket_init(&clients[i]);
     }
-
 
     if (passive_socket_bind(&passiveSocket)) {
         if (passive_socket_listen(&passiveSocket)) {
@@ -219,6 +204,8 @@ int main(int argc, char *argv[]) {
                 passive_socket_wait_for_clients(&passiveSocket, &clients[2]) &&
                 passive_socket_wait_for_clients(&passiveSocket, &clients[3])) {
                 cout << endl << "All players has successfully joined. Game can start." << endl;
+
+                // herna logika
                 srand(time(nullptr));
 
                 // inicializacia mutexov a conditionov
@@ -228,7 +215,6 @@ int main(int argc, char *argv[]) {
                 pthread_cond_init(&je_tah_hraca, nullptr);
 
                 // inicializacia hracej dosky
-
                 int pozicie_panacikov[16];
                 for (int i = 0; i < 16; ++i) {
                     pozicie_panacikov[i] = -1;
@@ -267,15 +253,8 @@ int main(int argc, char *argv[]) {
                 }
                 pthread_mutex_destroy(&mutex);
 
-
-
                 return 0;
             }
         }
     }
-
-
-
-    // herna logika
-
 }
